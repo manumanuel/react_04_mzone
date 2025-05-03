@@ -108,6 +108,7 @@ function ListedMovies({ movies }) {
   );
 }
 
+/* replaced this with CommonMovieList composition
 function MovieList({ children }) {
   const [isOpen1, setIsOpen1] = useState(true);
   return (
@@ -121,7 +122,7 @@ function MovieList({ children }) {
       {isOpen1 && children}
     </div>
   );
-}
+} */
 
 function WatchedMoviesSummary({ watched }) {
   const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
@@ -176,6 +177,7 @@ function WatchedMovie({ movie }) {
   );
 }
 
+/*  replaced this with CommonMovieList composition
 function WatchedMovieList() {
   const [watched, setWatched] = useState(tempWatchedData);
   const [isOpen2, setIsOpen2] = useState(true);
@@ -200,6 +202,18 @@ function WatchedMovieList() {
       )}
     </div>
   );
+} */
+
+function CommonList({ children }) {
+  const [isOpen, setIsOpen] = useState(true);
+  return (
+    <div className="box">
+      <button className="btn-toggle" onClick={() => setIsOpen((open) => !open)}>
+        {isOpen ? "–" : "+"}
+      </button>
+      {isOpen && children}
+    </div>
+  );
 }
 
 function Main({ children }) {
@@ -208,6 +222,7 @@ function Main({ children }) {
 
 export default function App() {
   const [movies, setMovies] = useState(tempMovieData);
+  const [watched, setWatched] = useState(tempWatchedData);
   return (
     <>
       <NavHeader>
@@ -215,10 +230,32 @@ export default function App() {
         <HeaderResult movies={movies} />
       </NavHeader>
       <Main>
-        <MovieList>
+        {/*Passing children as props
+        <CommonList element={<ListedMovies movies={movies} />} />
+        <CommonList
+          element={
+            <>
+              <WatchedMoviesSummary watched={watched} />
+              <ul className="list">
+                {watched.map((movie) => (
+                  <WatchedMovie key={movie.imdbID} movie={movie} />
+                ))}
+              </ul>
+            </>
+          }
+        />*/}
+
+        <CommonList>
           <ListedMovies movies={movies} />
-        </MovieList>
-        <WatchedMovieList />
+        </CommonList>
+        <CommonList>
+          <WatchedMoviesSummary watched={watched} />
+          <ul className="list">
+            {watched.map((movie) => (
+              <WatchedMovie key={movie.imdbID} movie={movie} />
+            ))}
+          </ul>
+        </CommonList>
       </Main>
     </>
   );
