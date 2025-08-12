@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating";
+import { useMovies } from "./useMovies";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKeys } from "./useKeys";
 
 const tempMovieData = [
   {
@@ -61,6 +64,14 @@ function HeaderLogo() {
 }
 
 function HeaderSearch({ searchKey, setSearchKey }) {
+  const inputEl = useRef(null);
+
+  useKeys("Enter", () => {
+    if (document.activeElement === inputEl.current) return;
+    inputEl.current.focus();
+    setSearchKey("");
+  });
+
   return (
     <input
       className="search"
@@ -68,6 +79,7 @@ function HeaderSearch({ searchKey, setSearchKey }) {
       placeholder="Search movies..."
       value={searchKey}
       onChange={(e) => setSearchKey(e.target.value)}
+      ref={inputEl}
     />
   );
 }
@@ -199,22 +211,13 @@ function SelectedMovieDetails({
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState("");
 
-  useEffect(
-    function () {
-      function callBack(e) {
-        if (e.code === "Escape") {
-          onSelectMovieClose();
-          console.log("Escape key pressed, closing movie details");
-        }
-      }
-      document.addEventListener("keydown", callBack);
+  const ratingCount = useRef(0);
 
-      return function () {
-        document.removeEventListener("keydown", callBack);
-      };
-    },
-    [onSelectMovieClose]
-  );
+  useEffect(() => {
+    if (userRating) ratingCount.current++;
+  }, [userRating]);
+
+  useKeys("Escape", onSelectMovieClose);
 
   const isWatched = watched.map((movie) => movie.imdbID).includes(movieId);
   const watchedMovieRating = watched.find(
@@ -255,6 +258,7 @@ function SelectedMovieDetails({
       runtime: Number(runtime.split(" ")[0]),
       imdbRating: Number(imdbRating),
       userRating, // default user rating
+      userRatingCount: ratingCount.current,
     };
     onSelectWatchedMovie(watchedMovie);
     onSelectMovieClose();
@@ -401,12 +405,12 @@ function Error({ msg }) {
 const KEY = "e5003b9c";
 
 export default function App() {
-  const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState([]);
   const [searchKey, setSearchKey] = useState("");
   const [selectedMovieId, setSelectedMovieId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { movies, isLoading, error } = useMovies(searchKey, KEY); //custom hook
+  //const [watched, setWatched] = useState([]);
+
+  const [watched, setWatched] = useLocalStorageState("watchedMovies", []);
 
   function handleMovieClick(id) {
     setSelectedMovieId((selectedId) => (selectedId === id ? null : id));
@@ -425,50 +429,6 @@ export default function App() {
       watched.filter((movie) => movie.imdbID !== movieId)
     );
   }
-
-  useEffect(
-    function () {
-      var controller = new AbortController();
-
-      async function fetchMovies() {
-        try {
-          setIsLoading(true);
-          setError("");
-          const res = await fetch(
-            `https://www.omdbapi.com/?apikey=${KEY}&s=${searchKey}`,
-            { signal: controller.signal }
-          );
-          const data = await res.json();
-          if (data.Response === "False") {
-            throw new Error(data.Error);
-          }
-          //console.log(data);
-          setMovies(data.Search);
-          setIsLoading(false);
-        } catch (error) {
-          // console.log(error);
-          if (error.name !== "AbortError") {
-            setError("Failed to fetch movies");
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
-      if (searchKey.length < 3) {
-        setMovies([]);
-        setIsLoading(false);
-        return;
-      }
-
-      fetchMovies();
-
-      return function () {
-        controller.abort(); // Cleanup function to abort fetch on unmount
-      };
-    },
-    [searchKey]
-  );
 
   return (
     <>
